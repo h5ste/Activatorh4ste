@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eagle Launcher 在线注册机</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        h1 {
+            color: #0078D4;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            font-size: 16px;
+        }
+        button {
+            background-color: #0078D4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #005fa3;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        button.secondary {
+            background-color: #e0e0e0;
+            color: #333;
+        }
+        button.secondary:hover {
+            background-color: #d0d0d0;
+        }
+        .result {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+            background-color: #f5f5f5;
+            min-height: 60px;
+        }
+        .log {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+            background-color: #f5f5f5;
+            height: 120px;
+            overflow-y: auto;
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+        .instructions {
+            margin-top: 30px;
+            padding: 15px;
+            border-left: 4px solid #0078D4;
+            background-color: rgba(0, 120, 212, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Eagle Launcher 在线注册机</h1>
+        
+        <div class="form-group">
+            <label for="machineCode">用户机器码：</label>
+            <input type="text" id="machineCode" placeholder="输入格式：XXXX-XXXX-XXXX-XXXX">
+        </div>
+        
+        <div class="form-group">
+            <button id="generateBtn" disabled>生成激活码</button>
+            <button id="clearBtn" class="secondary">清空</button>
+        </div>
+        
+        <label>激活码：</label>
+        <div class="result" id="result">
+            <span id="activationCode"></span>
+        </div>
+        
+        <div class="form-group">
+            <button id="copyBtn" disabled>复制激活码</button>
+        </div>
+        
+        <label>操作日志：</label>
+        <div class="log" id="log"></div>
+        
+        <div class="instructions">
+            <p><strong>使用说明：</strong></p>
+            <ol>
+                <li>从用户处获取机器码（格式为：XXXX-XXXX-XXXX-XXXX）</li>
+                <li>将机器码输入到上方输入框</li>
+                <li>点击"生成激活码"按钮</li>
+                <li>复制生成的激活码并提供给用户</li>
+                <li>用户在Eagle Launcher中输入激活码完成激活</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        // 定义SHA-256哈希函数
+        async function sha256(message) {
+            // 编码为UTF-8
+            const msgBuffer = new TextEncoder().encode(message);
+            
+            // 使用SubtleCrypto API计算哈希
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            
+            // 转换为十六进制字符串
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            
+            return hashHex;
+        }
+
+        // 生成激活码函数
+        async function generateActivationCode(machineCode) {
+            // 与C#版本使用相同的盐值
+            const salt = "EagleActivation2023!";
+            const input = machineCode + salt;
+            
+            // 计算SHA-256哈希
+            const hash = await sha256(input);
+            
+            // 取前32个字符（16字节）并格式化
+            const formattedCode = hash.substring(0, 32).toUpperCase();
+            
+            // 分成8段，每段4个字符
+            return [
+                formattedCode.substring(0, 4),
+                formattedCode.substring(4, 8),
+                formattedCode.substring(8, 12),
+                formattedCode.substring(12, 16),
+                formattedCode.substring(16, 20),
+                formattedCode.substring(20, 24),
+                formattedCode.substring(24, 28),
+                formattedCode.substring(28, 32)
+            ].join('-');
+        }
+
+        // 获取DOM元素
+        const machineCodeInput = document.getElementById('machineCode');
+        const generateBtn = document.getElementById('generateBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const activationCodeElement = document.getElementById('activationCode');
+        const logElement = document.getElementById('log');
+
+        // 添加日志函数
+        function addLog(message, isError = false) {
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            if (isError) {
+                logEntry.classList.add('error');
+            }
+            logElement.appendChild(logEntry);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        // 验证机器码格式
+        function validateMachineCode(code) {
+            const regex = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
+            return regex.test(code);
+        }
+
+        // 事件监听器
+        machineCodeInput.addEventListener('input', function() {
+            const machineCode = this.value.trim();
+            const isValid = validateMachineCode(machineCode);
+            generateBtn.disabled = !isValid;
+            
+            if (isValid && !generateBtn.disabled) {
+                addLog(`机器码格式有效: ${machineCode}`);
+            }
+        });
+
+        generateBtn.addEventListener('click', async function() {
+            const machineCode = machineCodeInput.value.trim();
+            
+            if (!validateMachineCode(machineCode)) {
+                addLog('机器码格式无效，请检查输入', true);
+                return;
+            }
+            
+            try {
+                addLog('正在生成激活码...');
+                const activationCode = await generateActivationCode(machineCode);
+                activationCodeElement.textContent = activationCode;
+                copyBtn.disabled = false;
+                addLog(`成功生成激活码: ${activationCode}`);
+            } catch (error) {
+                addLog(`生成激活码失败: ${error.message}`, true);
+            }
+        });
+
+        clearBtn.addEventListener('click', function() {
+            machineCodeInput.value = '';
+            activationCodeElement.textContent = '';
+            generateBtn.disabled = true;
+            copyBtn.disabled = true;
+            addLog('已清空所有输入');
+        });
+
+        copyBtn.addEventListener('click', function() {
+            const activationCode = activationCodeElement.textContent;
+            
+            if (!activationCode) {
+                addLog('没有可复制的激活码', true);
+                return;
+            }
+            
+            try {
+                navigator.clipboard.writeText(activationCode)
+                    .then(() => {
+                        addLog('激活码已复制到剪贴板');
+                    })
+                    .catch(err => {
+                        throw err;
+                    });
+            } catch (error) {
+                // 回退方案
+                const textarea = document.createElement('textarea');
+                textarea.value = activationCode;
+                document.body.appendChild(textarea);
+                textarea.select();
+                
+                try {
+                    document.execCommand('copy');
+                    addLog('激活码已复制到剪贴板');
+                } catch (err) {
+                    addLog(`复制失败: ${err.message}`, true);
+                }
+                
+                document.body.removeChild(textarea);
+            }
+        });
+
+        // 初始化
+        addLog('注册机已准备就绪，等待输入机器码...');
+    </script>
+</body>
+</html> 
